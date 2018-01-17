@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunhui.dao.PermissonMapper">
+  <resultMap id="BaseResultMap" type="com.yunhui.bean.po.Permisson">
+    <id column="permisson_id" jdbcType="INTEGER" property="permissonId" />
+    <result column="permisson_name" jdbcType="VARCHAR" property="permissonName" />
+    <result column="permisson_url" jdbcType="VARCHAR" property="permissonUrl" />
+    <result column="parent_permisson_id" jdbcType="INTEGER" property="parentPermissonId" />
+    <result column="parent_permisson_name" jdbcType="VARCHAR" property="parentPermissonName" />
+    <result column="permisson_lv" jdbcType="INTEGER" property="permissonLv" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    permisson_id, permisson_name, permisson_url, parent_permisson_id, permisson_lv
+  </sql>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from permisson
+    where permisson_id = #{permissonId,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from permisson
+    where permisson_id = #{permissonId,jdbcType=INTEGER}
+  </delete>
+  <insert id="insertSelective" parameterType="com.yunhui.bean.po.Permisson">
+    insert into permisson
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="permissonId != null">
+        permisson_id,
+      </if>
+      <if test="permissonName != null">
+        permisson_name,
+      </if>
+      <if test="permissonUrl != null">
+        permisson_url,
+      </if>
+      <if test="parentPermissonId != null">
+        parent_permisson_id,
+      </if>
+      <if test="permissonLv != null">
+        permisson_lv,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="permissonId != null">
+        #{permissonId,jdbcType=INTEGER},
+      </if>
+      <if test="permissonName != null">
+        #{permissonName,jdbcType=VARCHAR},
+      </if>
+      <if test="permissonUrl != null">
+        #{permissonUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="parentPermissonId != null">
+        #{parentPermissonId,jdbcType=INTEGER},
+      </if>
+      <if test="permissonLv != null">
+        #{permissonLv,jdbcType=INTEGER},
+      </if>
+    </trim>
+  </insert>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.yunhui.bean.po.Permisson">
+    update permisson
+    <set>
+      <if test="permissonName != null">
+        permisson_name = #{permissonName,jdbcType=VARCHAR},
+      </if>
+      <if test="permissonUrl != null">
+        permisson_url = #{permissonUrl,jdbcType=VARCHAR},
+      </if>
+      <if test="parentPermissonId != null">
+        parent_permisson_id = #{parentPermissonId,jdbcType=INTEGER},
+      </if>
+      <if test="permissonLv != null">
+        permisson_lv = #{permissonLv,jdbcType=INTEGER},
+      </if>
+    </set>
+    where permisson_id = #{permissonId,jdbcType=INTEGER}
+  </update>
+
+  <select id="listPermissionWithParName"  parameterType="com.yunhui.bean.po.Permisson" resultMap="BaseResultMap">
+      SELECT  p1.permisson_id, p1.permisson_name, p1.permisson_url, p1.parent_permisson_id,p2.permisson_name parent_permisson_name, p1.permisson_lv
+      FROM  permisson p1
+      LEFT JOIN  permisson p2 on p1.parent_permisson_id= p2.permisson_id
+      <where>
+        <if test="permissonName != null and permissonName !=''">
+          AND  p1.permisson_name like '%${permissonName}%'
+        </if>
+      </where>
+  </select>
+
+  <select id="listPermission"  parameterType="com.yunhui.bean.po.Permisson" resultMap="BaseResultMap">
+      SELECT  p1.permisson_id, p1.permisson_name, p1.permisson_url, p1.parent_permisson_id, p1.permisson_lv
+      FROM  permisson p1
+      <where>
+        <if test="permissonLv != null and permissonLv !=0">
+          AND  p1.permisson_lv = #{permissonLv,jdbcType=INTEGER}
+        </if>
+      </where>
+  </select>
+
+  <resultMap id="PermissionViewMap" type="com.yunhui.bean.vo.PermissonView">
+    <id column="par_permisson_id" jdbcType="INTEGER" property="permissonId" />
+    <result column="par_permisson_name" jdbcType="VARCHAR" property="permissonName" />
+    <collection property="childPermissons" ofType="com.yunhui.bean.po.Permisson">
+      <id column="child_permisson_id" jdbcType="INTEGER" property="permissonId" />
+      <result column="child_permisson_name" jdbcType="VARCHAR" property="permissonName" />
+      <result column="child_permisson_url" jdbcType="VARCHAR" property="permissonUrl" />
+    </collection>
+
+  </resultMap>
+
+  <select id="listPermissionView" resultMap="PermissionViewMap">
+       SELECT  p1.permisson_id par_permisson_id, p1.permisson_name par_permisson_name,p2.permisson_id child_permisson_id, p2.permisson_name child_permisson_name,p2.permisson_url child_permisson_url
+       FROM  permisson p1
+       LEFT JOIN permisson p2 ON  p1.permisson_id=p2.parent_permisson_id
+       WHERE p1.permisson_lv=1
+  </select>
+
+
+  <select id="getUserPermissons" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    SELECT
+	p2.permisson_id,
+	p2.permisson_name,
+	p2.permisson_url
+    FROM
+        role_permisson p,
+        permisson p2
+    WHERE
+        p.permisson_id = p2.permisson_id
+    AND p.role_id IN (
+        SELECT
+            r.role_id
+        FROM
+            user_role r
+        WHERE
+            r.user_id = #{userId,jdbcType=INTEGER}
+    )
+  </select>
+
+</mapper>

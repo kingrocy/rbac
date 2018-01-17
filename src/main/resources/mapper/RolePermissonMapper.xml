@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunhui.dao.RolePermissonMapper">
+  <resultMap id="BaseResultMap" type="com.yunhui.bean.po.RolePermisson">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="role_id" jdbcType="INTEGER" property="roleId" />
+    <result column="permisson_id" jdbcType="INTEGER" property="permissonId" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    id, role_id, permisson_id
+  </sql>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from role_permisson
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from role_permisson
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+
+  <delete id="deleteByRoleId" parameterType="java.lang.Integer">
+    delete from role_permisson
+    WHERE role_id= #{roleId,jdbcType=INTEGER}
+  </delete>
+
+
+
+  <insert id="insertSelective" parameterType="com.yunhui.bean.po.RolePermisson">
+    insert into role_permisson
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        id,
+      </if>
+      <if test="roleId != null">
+        role_id,
+      </if>
+      <if test="permissonId != null">
+        permisson_id,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="id != null">
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="roleId != null">
+        #{roleId,jdbcType=INTEGER},
+      </if>
+      <if test="permissonId != null">
+        #{permissonId,jdbcType=INTEGER},
+      </if>
+    </trim>
+  </insert>
+
+  <update id="updateByPrimaryKeySelective" parameterType="com.yunhui.bean.po.RolePermisson">
+    update role_permisson
+    <set>
+      <if test="roleId != null">
+        role_id = #{roleId,jdbcType=INTEGER},
+      </if>
+      <if test="permissonId != null">
+        permisson_id = #{permissonId,jdbcType=INTEGER},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+
+  <resultMap id="rolePermissonMap" type="com.yunhui.bean.vo.RolePermissonVO">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="role_id" jdbcType="INTEGER" property="roleId" />
+    <association property="permisson" javaType="com.yunhui.bean.po.Permisson">
+      <id column="permisson_id" jdbcType="INTEGER" property="permissonId" />
+      <result column="permisson_name" jdbcType="VARCHAR" property="permissonName" />
+      <result column="permisson_url" jdbcType="VARCHAR" property="permissonUrl" />
+    </association>
+  </resultMap>
+
+  <!--根据role_Id获取角色的权限详情-->
+  <select id="listRolePermissons" parameterType="java.lang.Integer" resultMap="rolePermissonMap">
+      SELECT   r.id, r.role_id, p.permisson_id, p.permisson_name, p.permisson_url
+      FROM role_permisson r,permisson p
+      WHERE r.permisson_id=p.permisson_id and r.role_id= #{roleId,jdbcType=INTEGER}
+  </select>
+
+  <!--根据roleId获取permissonIds-->
+  <select id="listRolePermisson" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    SELECT
+    <include refid="Base_Column_List"></include>
+    FROM role_permisson
+    WHERE role_id= #{roleId,jdbcType=INTEGER}
+  </select>
+
+  <!--批量新增-->
+  <insert id="batchInsert" parameterType="java.util.List">
+      INSERT INTO role_permisson(role_id,permisson_id) VALUES
+       <trim suffixOverrides=",">
+        <foreach item="item" index="index" collection="list">
+          (#{item.roleId},#{item.permissonId}),
+        </foreach>
+       </trim>
+
+  </insert>
+
+</mapper>
