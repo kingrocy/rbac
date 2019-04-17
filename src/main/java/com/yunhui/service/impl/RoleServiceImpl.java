@@ -1,76 +1,117 @@
 package com.yunhui.service.impl;
 
+import com.yunhui.bean.param.RoleAddParam;
+import com.yunhui.bean.param.RoleQueryParam;
+import com.yunhui.bean.param.RoleUpdateParam;
 import com.yunhui.bean.po.Role;
-import com.yunhui.bean.po.RolePermisson;
-import com.yunhui.bean.vo.RolePermissonVO;
-import com.yunhui.dao.RoleMapper;
-import com.yunhui.dao.RolePermissonMapper;
-import com.yunhui.service.interfaces.RoleService;
+import com.yunhui.bean.po.RolePermission;
+import com.yunhui.bean.vo.ManageRoleVO;
+import com.yunhui.common.page.PageResult;
+import com.yunhui.common.result.ResultCode;
+import com.yunhui.dao.AdminRoleDAO;
+import com.yunhui.dao.RoleDAO;
+import com.yunhui.dao.RolePermissionDAO;
+import com.yunhui.service.RoleService;
+import com.yunhui.util.BeanCopy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
-/**
- * @Author: Yun
- * @Description:
- * @Date: Created in 2017-12-09 13:59
- */
-@Service("roleService")
-public class RoleServiceImpl implements RoleService{
+
+@Service
+public class RoleServiceImpl implements RoleService {
+
 
     @Autowired
-    RoleMapper roleMapper;
+    RoleDAO roleDAO;
 
     @Autowired
-    RolePermissonMapper rolePermissonMapper;
+    RolePermissionDAO rolePermissionDAO;
+
+    @Autowired
+    AdminRoleDAO adminRoleDAO;
 
     @Override
-    public Integer add(Role role) {
-        return roleMapper.insertSelective(role);
+    @Transactional(rollbackFor = Exception.class)
+    public int addRolePermission(Long roleId, String permissionIds) {
+        String[] permissIds = permissionIds.split(",");
+        for (String pid : permissIds) {
+            RolePermission rolePermission = new RolePermission();
+            rolePermission.setRoleId(roleId);
+            rolePermission.setPermissonId(Long.valueOf(pid));
+            rolePermissionDAO.addRolePermission(rolePermission);
+        }
+        return 1;
     }
 
     @Override
-    public Integer delete(Integer roleId) {
-        return roleMapper.deleteByPrimaryKey(roleId);
+    @Transactional(rollbackFor = Exception.class)
+    public int deleteRolePermissionByRoleId(Long roleId) {
+        return rolePermissionDAO.deleteByRoleId(roleId);
     }
 
     @Override
-    public Integer update(Role role) {
-        return roleMapper.updateByPrimaryKeySelective(role);
+    public Role getRole(Long roleId) {
+        return roleDAO.getRole(roleId);
     }
 
     @Override
-    public List<Role> listRole(Role role) {
-        return roleMapper.listRole(role);
+    public ManageRoleVO getRoleVO(Long roleId) {
+        Role role = roleDAO.getRole(roleId);
+        ManageRoleVO roleVO = BeanCopy.copyTo(role, ManageRoleVO.class);
+        //查询这个角色拥有的全部权限
+        List<Long> permissionIds = rolePermissionDAO.listPermissionIdsByRoleId(roleId);
+        roleVO.setPermissionIds(permissionIds);
+        return roleVO;
     }
 
     @Override
-    public Role selectByPrimaryKey(Integer roleId) {
-        return roleMapper.selectByPrimaryKey(roleId);
+    @Transactional(rollbackFor = Exception.class)
+    public int add(RoleAddParam param) {
+        Role role = new Role();
+        role.setRoleName(param.getRoleName());
+        role.setRoleDesc(param.getRoleDesc());
+        int i = roleDAO.addRole(role);
+        if (!StringUtils.isEmpty(param.getPermissionIds())) {
+            addRolePermission(role.getId(), param.getPermissionIds());
+        }
+        return i;
     }
 
     @Override
-    public List<RolePermisson> listRolePermisson(Integer roleId) {
-        return rolePermissonMapper.listRolePermisson(roleId);
+    @Transactional(rollbackFor = Exception.class)
+    public int delete(Long roleId) {
+        //删除一个角色
+        //先删除这个角色所关联的所有权限
+        rolePermissionDAO.deleteByRoleId(roleId);
+        //再删除和这个角色所关联的所有管理员
+        adminRoleDAO.deleteByRoleId(roleId);
+        return roleDAO.deleteRole(roleId);
     }
 
     @Override
-    public List<RolePermissonVO> listRolePermissons(Integer roleId) {
-        return rolePermissonMapper.listRolePermissons(roleId);
-    }
-
-    @Transactional
-    @Override
-    public Integer batchInsert(List<RolePermisson> rolePermissons) {
-        RolePermisson rolePermisson=rolePermissons.get(0);
-        rolePermissonMapper.deleteByRoleId(rolePermisson.getRoleId());
-        return rolePermissonMapper.batchInsert(rolePermissons);
+    public PageResult<Role> listRole(RoleQueryParam param) {
+        List<Role> roles = roleDAO.listRole(param);
+        int count = 0;
+        if (param.getQueryCount()) {
+            count = roleDAO.countRole(param);
+        }
+        return new PageResult<>(param.getPageNo(),param.getPageSize(),count,roles);
     }
 
     @Override
-    public Integer deleteByRoleId(Integer roleId) {
-        return rolePermissonMapper.deleteByRoleId(roleId);
+    @Transactional(rollbackFor = Exception.class)
+    public int update(RoleUpdateParam param) {
+        Role role = BeanCopy.copyTo(param, Role.class);
+        int i = roleDAO.updateRole(role);
+        if (!StringUtils.isEmpty(param.getPermissionIds())) {
+            deleteRolePermissionByRoleId(param.getId());
+            addRolePermission(role.getId(), param.getPermissionIds());
+        }
+        return i;
     }
+
 }
